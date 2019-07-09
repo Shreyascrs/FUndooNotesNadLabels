@@ -4,6 +4,7 @@ import org.modelmapper.ModelMapper;
 import org.modelmapper.convention.MatchingStrategies;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.RestTemplate;
 
 import com.bridgeit.fundoo.responce.Responce;
 import com.bridgeit.fundoo.utility.TokenUtility;
@@ -26,5 +27,10 @@ public class ApplicationConfig {
 	public Responce get()
 	{
 		return new Responce();
+	}
+	@Bean
+	public RestTemplate rest()
+	{
+		return new RestTemplate();
 	}
 }

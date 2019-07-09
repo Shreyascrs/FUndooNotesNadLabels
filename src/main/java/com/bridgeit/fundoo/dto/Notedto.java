@@ -2,6 +2,7 @@ package com.bridgeit.fundoo.dto;
 
 public class Notedto {
 
+	
 	private String title;
 	private String description;
 
