@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Set;
 
 import javax.persistence.CascadeType;
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
@@ -24,8 +25,6 @@ public class Note implements Serializable {
 	 */
 	private static final long serialVersionUID = 112121L;
 
-
-
 	public Note() {
 		super();
 		// TODO Auto-generated constructor stub
@@ -43,12 +42,11 @@ public class Note implements Serializable {
 	private boolean archive;
 	private boolean trash;
 	private boolean isPin;
-	
-	@ManyToMany(fetch = FetchType.EAGER,cascade = {CascadeType.PERSIST,CascadeType.MERGE})
-	@JoinTable(name="notelabels",joinColumns = {@JoinColumn(name="noteid")},inverseJoinColumns = {@JoinColumn(name="labelId")})	
-	private List<Label> labels;
 
-	
+	@ManyToMany(fetch = FetchType.EAGER, cascade = { CascadeType.PERSIST, CascadeType.MERGE })
+	@JoinTable(name = "notelabels", joinColumns = { @JoinColumn(name = "noteid") }, inverseJoinColumns = {
+			@JoinColumn(name = "labelId") })
+	private List<Label> labels;
 
 	public List<Label> getLabels() {
 		return labels;
@@ -158,5 +156,5 @@ public class Note implements Serializable {
 		return "Note [noteid=" + noteid + ", userid=" + userid + ", title=" + title + ", color=" + color
 				+ ", description=" + description + ", createdTime=" + createdTime + ", updatedTime=" + updatedTime
 				+ ", archive=" + archive + ", trash=" + trash + ", isPin=" + isPin + "]";
-	}	
+	}
 }

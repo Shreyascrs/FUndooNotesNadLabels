@@ -4,15 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
 import org.modelmapper.ModelMapper;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -36,7 +34,7 @@ class NoteTest {
 		
 	}
 
-	@Rule public MockitoRule rule=MockitoJUnit.rule();
+//	@Rule public MockitoRule rule=MockitoJUnit.rule();
 	
 	@Mock
 	TokenUtility tokenUtility;
@@ -56,6 +54,7 @@ class NoteTest {
 	@Mock
 	INoteService inoteservice;
 	
+	
 	@InjectMocks
 	NoteServiceImpl noteservice;
 	
@@ -67,9 +66,14 @@ class NoteTest {
 
 	@Test
 	public void testCreateNote() {
-		Notedto notedto = new Notedto("test", "test");                                                     
+		Notedto notedto = new Notedto("test", "test");      
+		Note note=new Note(123, "12345", "test", "white", "test", "12/12/12",
+				"12/12/12", false, false, false);
 		Responce resp = new Responce(200, "note is saved", "");
-		String token = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJmdW5kb29Ob3RlcyIsImV4cCI6MTU2MjczODYxNSwianRpIjoiNWNlNjc1OWY2OGUyZDM0NmZlOGUyYjIyIn0.FSqDfmUxEhyQodc5eCYcEjFj4LD8r40_VIuo4e5OUIY";
+		String token = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJmdb9Ob3RlcyIsImV4cCI6MTU2MjczODYxNSwianRpIjoiNWNlNjc1OWY2OGUyZDM0NmZlOGUyYjIyIn0.FSqDfmUxEhyQodc5eCYcEjFj4LD8r40_VIuo4e5OUIY";
+		when(tokenUtility.verifyToken(token));
+		when(mapper.map(notedto, Note.class)).thenReturn(note);
+		when(responce.sendResponse(Mockito.anyInt(),Mockito.anyString(),Mockito.anyString())).thenReturn(resp);
 		assertEquals(resp.getStatusCode(), noteservice.createNote(notedto, token).getStatusCode());
 	}
 

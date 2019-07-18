@@ -3,17 +3,15 @@ package com.bridgeit.fundoo.service;
 import java.io.UnsupportedEncodingException;
 import java.util.List;
 import java.util.Optional;
-
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-
 import com.bridgeit.fundoo.dto.Notedto;
 import com.bridgeit.fundoo.elasticsearch.IElasticSearch;
+import com.bridgeit.fundoo.exceptionHandler.NoteException;
 import com.bridgeit.fundoo.model.Label;
 import com.bridgeit.fundoo.model.Note;
 import com.bridgeit.fundoo.redis.RedisService;
@@ -40,7 +38,9 @@ public class NoteServiceImpl implements INoteService {
 	IElasticSearch elasticsearch;
 	@Autowired
 	RedisService<Note> redis;
-	
+	@Autowired
+	RabbitmqSender rabbitsender;
+
 	private static final Logger log = LoggerFactory.getLogger(NoteServiceImpl.class);
 
 	public Responce createNote(Notedto notedto, String token) {
@@ -49,7 +49,7 @@ public class NoteServiceImpl implements INoteService {
 		Note note = mapper.map(notedto, Note.class);
 //		Note note = new Note();
 //		BeanUtils.copyProperties(notedto, note);
-//		log.info(note.toString());
+		log.info(note.toString());
 		note.setUserid(userid);
 		note.setCreatedTime(TimeUtility.todayDate());
 		note.setUpdatedTime(TimeUtility.todayDate());
@@ -57,11 +57,12 @@ public class NoteServiceImpl implements INoteService {
 		note.setPin(false);
 		note.setArchive(false);
 		note.setTrash(false);
-		System.out.println("entered for testing");
+		System.out.println("entered for testing /n" + note.toString());
 		Note noter;
 
 		try {
 			noter = repository.save(note);
+			rabbitsender.send(noter);
 			// redis.putMap("notes", note.getNoteid(), noter);
 //			elasticsearch.createNote(note);
 
@@ -76,21 +77,25 @@ public class NoteServiceImpl implements INoteService {
 	@Override
 	public Responce updateNote(Notedto notedto, long noteid) {
 		Optional<Note> updatednote = repository.findByNoteid(noteid);
-		if (updatednote.isPresent()) {
+		if (!updatednote.isPresent())
+
+			throw new NoteException("note not present");
+		else {
 
 			updatednote.get().setTitle(notedto.getTitle());
 			updatednote.get().setDescription(notedto.getDescription());
 			updatednote.get().setUpdatedTime(TimeUtility.todayDate());
-		}
-		try {
-			Note updated = repository.save(updatednote.get());
-			updated.toString();
 
-		} catch (Exception e) {
-			e.printStackTrace();
-			responce.sendResponse(400, "note not updated", "");
+			try {
+				Note updated = repository.save(updatednote.get());
+				updated.toString();
+
+			} catch (Exception e) {
+				e.printStackTrace();
+				responce.sendResponse(400, "note not updated", "");
+			}
+			return responce.sendResponse(HttpStatus.ACCEPTED.value(), "note updated successfully", "");
 		}
-		return responce.sendResponse(HttpStatus.ACCEPTED.value(), "note updated successfully", "");
 
 	}
 
@@ -105,11 +110,13 @@ public class NoteServiceImpl implements INoteService {
 	public Responce deleteNote(String token, long noteid) {
 		String userid = tokenUtility.verifyToken(token);
 		Optional<Note> note = repository.findByUseridAndNoteid(userid, noteid);
-		if (note.isPresent()) {
+		if (!note.isPresent())
+			throw new NoteException("note not present");
+		else {
 			repository.delete(note.get());
 			return responce.sendResponse(200, "note deleted successfully", "");
 		}
-		return responce.sendResponse(400, "note not found", "");
+
 	}
 
 	public List<Note> sortOnCreatedTime(String token) {
@@ -122,20 +129,21 @@ public class NoteServiceImpl implements INoteService {
 	public Responce ispin(String token, long noteid) {
 		String userid = tokenUtility.verifyToken(token);
 		Optional<Note> isnote = repository.findByUseridAndNoteid(userid, noteid);
-		if (isnote.isPresent()) {
-			Note note = isnote.get();
-			if (note.isTrash()) {
-				return responce.sendResponse(400, "note is in trash", "");
-			}
-			if (note.isPin()) {
-				note.setPin(false);
-			} else {
-				note.setPin(true);
-			}
-		} else {
-			return responce.sendResponse(400, "note not present", "");
+		if (!isnote.isPresent())
+			throw new NoteException("note not present");
+
+		Note note = isnote.get();
+		log.info(note.toString());
+		if (note.isTrash()) {
+			return responce.sendResponse(400, "note is in trash", "");
 		}
-		return responce.sendResponse(200, "pin data successfull", "");
+		if (note.isPin()) {
+			note.setPin(false);
+		} else {
+			note.setPin(true);
+		}
+
+		return responce.sendResponse(200, "not pinned successfull", "");
 	}
 
 	@Override
@@ -191,7 +199,6 @@ public class NoteServiceImpl implements INoteService {
 			if (!note.isTrash()) {
 				note.setUpdatedTime(TimeUtility.todayDate());
 				List<Label> islabels = note.getLabels();
-				System.out.println(islabels);
 				if (islabels != null) {
 					Optional<Label> oplabel = islabels.stream().filter(l -> l.getLabelId() == label.getLabelId())
 							.findFirst();
